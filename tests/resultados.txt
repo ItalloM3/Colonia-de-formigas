@@ -1,0 +1,110 @@
+TESTES DE VALIDAÇÃO — Colônia de Formigas (Ant System)
+Instância: A=(0,0) B=(3,0) C=(3,4) D=(0,4), depósito A. Tolerância 0,000001.
+
+6.1 Instância de referência e cálculo das rotas
+  [OK] d(A,B) = 3  → obtido 3
+  [OK] d(A,C) = 5  → obtido 5
+  [OK] d(A,D) = 4  → obtido 4
+  [OK] d(B,C) = 4  → obtido 4
+  [OK] d(B,D) = 5  → obtido 5
+  [OK] d(C,D) = 3  → obtido 3
+  [OK] d(i,i) = 0 em toda a diagonal
+  [OK] A → B → C → D → A = 14  → obtido 14
+  [OK] A → B → D → C → A = 16  → obtido 16
+  [OK] A → C → B → D → A = 18  → obtido 18
+  [OK] A → C → D → B → A = 16  → obtido 16
+  [OK] A → D → B → C → A = 18  → obtido 18
+  [OK] A → D → C → B → A = 14  → obtido 14
+  [OK] rota incompleta é inválida
+  [OK] rota com repetição é inválida
+  [OK] rota sem retorno ao depósito é inválida
+
+6.2 Probabilidades de escolha (τ = 1, α = 1, β = 2)
+  [OK] w(A,B)=1/9, w(A,C)=1/25, w(A,D)=1/16  → 0,111111; 0,04; 0,0625
+  [OK] p(A,B)=400/769, p(A,C)=144/769, p(A,D)=225/769  → 0,520156; 0,187256; 0,292588
+  [OK] soma das probabilidades = 1
+  [OK] após visitar B: p(B,C)=25/41 e p(B,D)=16/41 (A e B fora do sorteio)  → 0,609756; 0,390244
+  [OK] α = 0 e β = 0: probabilidades iguais (1/3)  → 0,333333; 0,333333; 0,333333
+  [OK] α = 0: feromônio não influencia (usa só distância)
+  [OK] β = 0: distância não influencia (usa só feromônio)
+  [OK] um único candidato: probabilidade 1
+  [OK] sorteio proporcional: 100 000 sorteios reproduzem as probabilidades (±0,01)  → freq. 0,51963; 0,18868; 0,29169
+
+6.3 Evaporação e depósito (τ₀=1, ρ=50%, Q=14)
+  [OK] após evaporação todas as 6 arestas valem 0,5
+  [OK] depósito Q/L = 1 em AB, BC, CD e AD (inclui o retorno D→A)
+  [OK] final: AB = BC = CD = AD = 1,5
+  [OK] final: AC = BD = 0,5 (sem depósito)
+  log AB: "anterior 1; após evaporação 0,5; depósito 1; final 1,5"
+  log AC: "anterior 1; após evaporação 0,5; depósito 0; final 0,5"
+  [OK] matriz simétrica e diagonal sem feromônio
+  [OK] 2ª iteração, mesma rota: perímetro = 1,75 e diagonais = 0,25  → perímetro 1,75; diagonais 0,25
+  [OK] duas formigas, mesma rota, 1 iteração: perímetro = 2,5 e diagonais = 0,5  → perímetro 2,5; diagonais 0,5
+  [OK] duas formigas em sentidos opostos: perímetro = 2,5 (1 depósito por formiga e aresta)
+  [OK] as 5 formigas usaram os mesmos feromônios (τ de início da iteração = τ₀)
+  [OK] ρ = 0%: evaporação não reduz nenhuma aresta em 10 iterações
+  [OK] piso numérico: nenhuma aresta fica abaixo de 1e-12
+
+6.4 Execução completa e reprodutibilidade (10 formigas, 30 iterações, α=1, β=2, ρ=50%, τ₀=1, Q=14, semente 42)
+  melhor rota: A → D → C → B → A; comprimento 14; encontrada na iteração 1
+  melhor por iteração (1–30): 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14 14
+  média por iteração (1–5):   14,8 15 14,6 14,6 14,2 …
+  [OK] 30 registros, um por iteração concluída
+  [OK] toda rota construída é válida (300 rotas)
+  [OK] todo comprimento ∈ {14, 16, 18}
+  [OK] melhor distância acumulada nunca aumenta
+  [OK] melhor final = 14 (rota ótima de referência)
+  [OK] métricas coerentes: menor ≤ média ≤ maior comprimento da iteração
+  [OK] mesmos dados, parâmetros e semente reproduzem o histórico
+  [OK] pausar/retomar (e variar a velocidade) preserva o resultado
+  [OK] Reiniciar limpa histórico, restaura τ₀ e a semente (reproduz o mesmo histórico)
+  [OK] estado inicial: iteração 0, τ = 1, melhor distância ainda não calculada (null, não 0)
+  [OK] sementes diferentes produzem históricos diferentes
+  [OK] log de construção: 1º passo da 1ª formiga mostra p = 400/769; 144/769; 225/769 e u coerente  → u = 0,601104; escolhido C
+
+6.5 Efeito dos parâmetros e entradas inválidas
+  Comparação β = 0 × β = 2 (demais parâmetros da 6.4; sementes 1 a 5):
+    β = 0: melhores finais por semente = [14; 14; 14; 14; 14]; média = 14; atingiram 14: 5 de 5
+    β = 2: melhores finais por semente = [14; 14; 14; 14; 14]; média = 14; atingiram 14: 5 de 5
+  [OK] todos os resultados finais de β=0 e β=2 pertencem a {14, 16, 18}
+  Interpretação: com 4 vértices há só 6 rotas (3 distintas), então 10 formigas × 30 iterações já cobrem o espaço de busca;
+  β = 0 e β = 2 empatam e não é possível concluir que a distância ajude nesta instância pequena (ver teste extra abaixo).
+  Entradas inválidas (devem impedir a execução, com mensagem clara):
+  [OK] cenário e parâmetros de referência são aceitos
+  [OK] ρ = 50% é convertido para 0,5
+  [OK] coordenadas duplicadas  → "Coordenadas duplicadas: "B" e "A" estão em (0; 0). A distância seria zero."
+  [OK] identificadores repetidos  → "Identificador repetido: "a" (vértices 1 e 2)."
+  [OK] menos de quatro vértices  → "São necessários pelo menos 4 vértices (há 3). Adicione vértices."
+  [OK] mais de doze vértices  → "O máximo é 12 vértices (há 13). Remova vértices."
+  [OK] coordenada vazia  → "Vértice 3 (C), coordenada x: campo vazio."
+  [OK] coordenada fora do intervalo (1000,01)  → "Vértice 3 (C), coordenada x: 1000,01 está fora do intervalo 0 a 1000."
+  [OK] coordenada negativa  → "Vértice 3 (C), coordenada y: -1 está fora do intervalo 0 a 1000."
+  [OK] três casas decimais  → "Vértice 3 (C), coordenada y: use no máximo duas casas decimais."
+  [OK] coordenada não numérica  → "Vértice 3 (C), coordenada y: "abc" não é um número válido."
+  [OK] depósito não selecionado  → "Selecione um dos vértices como depósito."
+  [OK] ants = "0"  → "Número de formigas: 0 está fora do intervalo 1 a 100."
+  [OK] ants = "101"  → "Número de formigas: 101 está fora do intervalo 1 a 100."
+  [OK] ants = "2,5"  → "Número de formigas: "2,5" não é um número inteiro válido."
+  [OK] ants = ""  → "Número de formigas: campo vazio."
+  [OK] iterations = "201"  → "Número de iterações: 201 está fora do intervalo 1 a 200."
+  [OK] alpha = "5,1"  → "Influência do feromônio (α): 5,1 está fora do intervalo 0 a 5."
+  [OK] alpha = "-1"  → "Influência do feromônio (α): -1 está fora do intervalo 0 a 5."
+  [OK] beta = "6"  → "Influência da distância (β): 6 está fora do intervalo 0 a 5."
+  [OK] rho = "91"  → "Taxa de evaporação (ρ): 91% está fora do intervalo 0% a 90%."
+  [OK] rho = "-5"  → "Taxa de evaporação (ρ): -5% está fora do intervalo 0% a 90%."
+  [OK] tau0 = "0"  → "Feromônio inicial (τ₀): 0 está fora do intervalo 0,01 a 100."
+  [OK] tau0 = "100,5"  → "Feromônio inicial (τ₀): 100,5 está fora do intervalo 0,01 a 100."
+  [OK] Q = "0,001"  → "Constante de depósito (Q): 0,001 está fora do intervalo 0,01 a 10000."
+  [OK] Q = "10001"  → "Constante de depósito (Q): 10001 está fora do intervalo 0,01 a 10000."
+  [OK] seed = ""  → "Semente aleatória: campo vazio."
+  [OK] seed = "1,5"  → "Semente aleatória: "1,5" não é um número inteiro válido."
+  [OK] seed = "x"  → "Semente aleatória: "x" não é um número inteiro válido."
+  [OK] limites aceitos: ants 1 e 100, iterations 1 e 200, ρ 0% e 90%, τ₀ 0,01 e 100, Q 0,01 e 10000, α/β 0 e 5
+
+Teste extra — cenário inicial da aplicação (8 vértices) × ótimo por força bruta (7! = 5 040 rotas)
+  ótimo exato: A → G → F → E → D → B → C → H → A = 281,335186
+  parâmetros padrão da aplicação, sementes 1–5: melhores = [281,335186; 281,335186; 281,335186; 281,335186; 281,335186]
+  [OK] todas as execuções encontram rotas válidas com comprimento ≥ ótimo
+  [OK] a melhor execução fica a até 5% do ótimo  → melhor 281,335186 × ótimo 281,335186
+
+RESUMO: 81 verificações OK, 0 falhas.

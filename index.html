@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rota de entregas por colônia de formigas — Ant System</title>
+  <meta name="description" content="Simulador de Ant System para o problema do caixeiro viajante (rota de entregas). UFPI — Inteligência Artificial 2026.2.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="title">
+    <h1>Rota de entregas por colônia de formigas</h1>
+    <p>Ant System · Inteligência Artificial · UFPI 2026.2</p>
+  </div>
+  <a id="repo-link" class="repo" href="https://github.com/SEU-USUARIO/colonia-formigas" target="_blank" rel="noopener">Código-fonte no GitHub</a>
+</header>
+
+<div class="layout">
+  <!-- ============ CONFIGURAÇÃO ============ -->
+  <aside class="config" id="config" aria-label="Configuração">
+    <section>
+      <h2>Cenário</h2>
+      <div class="row-inline">
+        <label for="preset">Carregar cenário</label>
+        <select id="preset">
+          <option value="">— escolher —</option>
+          <option value="inicial">Cenário inicial (8 pontos)</option>
+          <option value="ref">Instância de referência (A, B, C, D)</option>
+        </select>
+      </div>
+      <table class="vtable">
+        <thead><tr><th scope="col">Depósito</th><th scope="col">Id</th><th scope="col">x</th><th scope="col">y</th><th scope="col"><span class="sr">Remover</span></th></tr></thead>
+        <tbody id="vbody"></tbody>
+      </table>
+      <div class="row-inline between">
+        <button type="button" id="add-vertex" class="btn small">Adicionar vértice</button>
+        <span id="vcount" class="muted"></span>
+      </div>
+      <p class="hint">Entre 4 e 12 vértices. Coordenadas de 0 a 1.000, até duas casas decimais, na mesma unidade de distância.</p>
+    </section>
+
+    <section>
+      <h2>Parâmetros</h2>
+      <div id="params" class="params"></div>
+      <button type="button" id="preset-params" class="btn small ghost">Usar parâmetros do teste 6.4</button>
+    </section>
+  </aside>
+
+  <!-- ============ ÁREA PRINCIPAL ============ -->
+  <main id="main">
+    <section class="controls" aria-label="Execução">
+      <div class="buttons">
+        <button type="button" id="btn-run" class="btn primary">Executar</button>
+        <button type="button" id="btn-pause" class="btn">Pausar</button>
+        <button type="button" id="btn-step" class="btn">Avançar uma iteração</button>
+        <button type="button" id="btn-reset" class="btn">Reiniciar</button>
+      </div>
+      <div class="speed">
+        <label for="speed">Pausa entre iterações</label>
+        <input type="range" id="speed" min="0" max="1500" step="50" value="300">
+        <output id="speed-out">300 ms</output>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+      <p class="hint" style="margin:0">A velocidade só muda o ritmo da animação; os sorteios e resultados são os mesmos.</p>
+    </section>
+
+    <div id="errors" class="errors" role="alert" hidden></div>
+    <div id="banner" class="banner" hidden></div>
+
+    <section class="metrics" aria-label="Métricas">
+      <div class="metric"><span class="m-label">Iteração</span><strong id="m-iter">0</strong><span class="m-sub" id="m-iter-sub"></span></div>
+      <div class="metric"><span class="m-label">Menor distância da iteração</span><strong id="m-iterbest">—</strong></div>
+      <div class="metric"><span class="m-label">Média das formigas</span><strong id="m-mean">—</strong></div>
+      <div class="metric accent"><span class="m-label">Melhor distância acumulada</span><strong id="m-best">ainda não calculada</strong></div>
+    </section>
+    <p class="best-line"><span class="m-label">Melhor rota</span> <span id="best-route">ainda não calculada</span></p>
+
+    <section class="stage" aria-label="Grafo">
+      <div class="view-nav" id="view-nav">
+        <button type="button" id="nav-prev" class="btn small" aria-label="Iteração anterior">‹</button>
+        <span id="nav-label">Iteração 0</span>
+        <button type="button" id="nav-next" class="btn small" aria-label="Próxima iteração">›</button>
+        <button type="button" id="nav-follow" class="btn small ghost" hidden>Voltar à mais recente</button>
+        <label class="check"><input type="checkbox" id="show-labels"> Valores de τ nas arestas</label>
+        <label class="check"><input type="checkbox" id="show-ant"> Mostrar rota da formiga do log</label>
+      </div>
+      <div class="stage-body">
+        <svg id="graph" class="graph" role="img" aria-label="Grafo completo dos pontos de entrega com feromônio nas arestas"></svg>
+        <div class="side">
+          <div class="edge-panel" id="edge-panel" aria-live="polite"></div>
+          <div class="legend" id="legend"></div>
+        </div>
+      </div>
+      <p id="scale-note" class="scale-note"></p>
+    </section>
+
+    <section class="block">
+      <h2>Evolução das distâncias</h2>
+      <svg id="chart" class="chart" role="img" aria-label="Gráfico da evolução das distâncias por iteração"></svg>
+      <ul class="chart-legend">
+        <li><i class="sw ser-iter"></i>Menor da iteração</li>
+        <li><i class="sw ser-mean"></i>Média das formigas</li>
+        <li><i class="sw ser-best"></i>Melhor acumulada</li>
+      </ul>
+    </section>
+
+    <section class="block">
+      <h2>Histórico por iteração</h2>
+      <p class="hint">Clique em uma linha para ver o grafo e os logs daquela iteração.</p>
+      <div class="table-wrap" id="history-wrap"><table class="htable" id="history"></table></div>
+    </section>
+
+    <section class="block" id="logs-block">
+      <h2>Logs da execução</h2>
+      <div id="logs-body"></div>
+    </section>
+  </main>
+</div>
+
+<footer class="foot">
+  <span>Trabalho de Inteligência Artificial — UFPI, 2026.2.</span>
+  <a href="https://github.com/SEU-USUARIO/colonia-formigas" class="repo-foot" target="_blank" rel="noopener">Repositório no GitHub</a>
+</footer>
+
+<script src="js/random.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/ant-system.js"></script>
+<script src="js/simulation.js"></script>
+<script src="js/validation.js"></script>
+<script src="js/visualization.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
