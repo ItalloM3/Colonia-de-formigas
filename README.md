@@ -2,8 +2,8 @@
 
 **Disciplina:** Inteligência Artificial — UFPI, período 2026.2
 **Autores:** _(preencher: nome completo e matrícula de cada integrante, no máximo três)_
-**Aplicação publicada (GitHub Pages):** _(colar aqui o link, ex.: https://SEU-USUARIO.github.io/colonia-formigas/)_
-**Repositório:** _(https://github.com/SEU-USUARIO/colonia-formigas)_
+**Aplicação publicada (GitHub Pages):** https://itallom3.github.io/Colonia-de-formigas/
+**Repositório:** https://github.com/ItalloM3/Colonia-de-formigas
 
 ## 1. Descrição da solução
 
@@ -21,10 +21,10 @@ Simulador, executado inteiramente no navegador, que usa a variante **Ant System*
 
 1. Abra a página (GitHub Pages ou o arquivo `index.html` direto no navegador; não exige servidor, login ou instalação).
 2. Em **Cenário**, edite, adicione (até 12) ou remova vértices (mínimo 4) e escolha o **depósito** no botão de opção da linha. O menu *Carregar cenário* traz o cenário inicial de 8 pontos e a instância de referência A, B, C, D do enunciado.
-3. Em **Parâmetros**, ajuste os campos (tabela abaixo). Qualquer campo vazio ou inválido bloqueia a execução e mostra a mensagem do problema.
-4. Use **Executar**, **Pausar** (preserva o estado), **Avançar uma iteração** (completa uma iteração e permanece pausado) e **Reiniciar** (limpa o histórico, restaura τ₀ e a semente). O controle de velocidade só altera a pausa entre iterações; não muda sorteios nem resultados.
+3. Em **Ajustes do algoritmo** (menu sanfona na barra lateral; o resumo dos valores atuais aparece mesmo recolhido), ajuste os campos (tabela abaixo). Qualquer campo vazio ou inválido bloqueia a execução, mostra a mensagem do problema e abre a sanfona automaticamente.
+4. No **painel fixo do topo** (permanece visível ao rolar a página) ficam os controles e as métricas. Use **Executar**, **Pausar** (preserva o estado), **Avançar uma iteração** (completa uma iteração e permanece pausado) e **Reiniciar** (limpa o histórico, restaura τ₀ e a semente). O controle de velocidade só altera a pausa entre iterações; não muda sorteios nem resultados.
 5. Se os dados ou parâmetros forem alterados depois que a execução começou, os botões Executar/Avançar ficam bloqueados até clicar em **Reiniciar**.
-6. Acompanhe: métricas (iteração, menor distância da iteração, média, melhor acumulada, melhor rota), o grafo, o gráfico de evolução, o histórico (clique numa linha para ver o grafo e os logs daquela iteração; também há os botões ‹ › ) e os logs expansíveis.
+6. Acompanhe pelas métricas fixas (iteração, menor distância da iteração, média, melhor acumulada e melhor rota) e pelas **abas**: **Grafo** (padrão), **Gráfico** (evolução das distâncias), **Histórico** (uma linha por iteração; clique numa linha para visualizar aquela iteração) e **Logs**. Os botões ‹ › ao lado das abas navegam entre iterações e valem para todas as abas; *Ir para a mais recente* volta a seguir a execução.
 
 ### Parâmetros
 
@@ -54,10 +54,10 @@ Valores iniciais: 15 formigas, 50 iterações, α = 1, β = 3, ρ = 30%, τ₀ =
 
 ## 4. Logs e transparência
 
-Em **Logs da execução** (painéis expansíveis), para qualquer iteração concluída e **qualquer formiga** (não só uma):
+Na aba **Logs** tudo fica recolhido até você abrir (painéis `<details>`). Para qualquer iteração concluída e **qualquer formiga** (cada formiga é um painel; o conteúdo só é montado ao abrir):
 
 - **Construção da rota:** em cada passo, vértice atual, candidatos, d, τ, w, probabilidade p (com barra), número sorteado `u` e vértice escolhido; depois o retorno obrigatório ao depósito e o comprimento L. Para reproduzir a escolha: `u` cai no intervalo acumulado de p do candidato escolhido (quando só resta um candidato, p = 100% e não há sorteio).
-- **Rotas e comprimentos** das formigas da iteração, menor L, média e melhor acumulada.
+- **Rota e comprimento L** de cada formiga já no título do painel, e no topo da aba o menor L, a média e a melhor acumulada da iteração.
 - **Atualização dos feromônios:** para cada aresta, feromônio anterior, após evaporação, depósito total e final.
 
 Os candidatos, pesos e probabilidades exibidos são recalculados com as mesmas funções do algoritmo, a partir dos feromônios guardados no início daquela iteração e do número `u` realmente sorteado; portanto correspondem à execução real.
@@ -90,8 +90,8 @@ Os módulos de `js/` (exceto `visualization.js` e `main.js`) funcionam tanto no 
 
 1. Crie um repositório **público** e envie todos os arquivos (a pasta raiz deve conter `index.html`).
 2. Em *Settings → Pages*, escolha *Deploy from a branch*, branch `main`, pasta `/ (root)`.
-3. Aguarde alguns minutos e acesse `https://SEU-USUARIO.github.io/NOME-DO-REPOSITORIO/`.
-4. Troque `https://github.com/SEU-USUARIO/colonia-formigas` pelo endereço real do repositório no `index.html` (cabeçalho e rodapé) e neste README.
+3. Aguarde alguns minutos e acesse `https://itallom3.github.io/Colonia-de-formigas/`.
+4. Troque `https://github.com/ItalloM3/colonia-formigas` pelo endereço real do repositório no `index.html` (cabeçalho e rodapé) e neste README.
 
 ## 8. Testes de validação
 

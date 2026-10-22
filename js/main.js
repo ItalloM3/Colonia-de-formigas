@@ -29,7 +29,7 @@
     rows: [], depotUid: null, params: Object.assign({}, DEFAULT_PARAMS),
     sim: null, snapshot: null, running: false, timer: null, delay: 300,
     viewIter: null, hover: null, pinned: null, logAnt: 0, showLabels: false, showAnt: false,
-    open: {}, ev: null, gd: null, edgeSig: ''
+    open: {}, ev: null, gd: null, edgeSig: '', tab: 'graph', paramErr: false
   };
   const newRow = (id, x, y) => ({ uid: ++uidSeq, id: String(id), x: String(x), y: String(y) });
 
@@ -129,6 +129,10 @@
         if (er) er.textContent = e.message.replace(/^[^:]+:\s*/, '');
       }
     }
+    const hasParamErr = ev.errors.some(e => Validation.PARAMS[e.field]);
+    if (hasParamErr && !state.paramErr) $('#params-acc').open = true;
+    state.paramErr = hasParamErr;
+    $('#params-acc').classList.toggle('has-error', hasParamErr);
     const box = $('#errors');
     if (ev.errors.length) {
       box.hidden = false;
@@ -151,8 +155,16 @@
       state.sim = null; state.snapshot = null; state.viewIter = null; state.logAnt = 0;
     }
     paintValidation(state.ev);
+    renderParamSummary();
     updateControls();
     renderAll();
+  }
+
+  function renderParamSummary() {
+    const p = state.params, t = v => String(v).trim() || '?';
+    $('#params-sum').textContent = state.paramErr
+      ? 'há valores inválidos — abra para corrigir'
+      : `${t(p.ants)} formigas · ${t(p.iterations)} iterações · α ${t(p.alpha)} · β ${t(p.beta)} · ρ ${t(p.rho)}% · τ₀ ${t(p.tau0)} · Q ${t(p.Q)} · semente ${t(p.seed)}`;
   }
 
   function updateControls() {
@@ -269,11 +281,24 @@
   function renderAll() {
     state.gd = computeGraphData();
     renderMetrics();
-    renderGraphArea();
-    renderChartArea();
-    renderHistory();
-    const active = document.activeElement;
-    if (!(active && active.id === 'log-ant')) renderLogs();
+    renderNav();
+    // só desenha a aba visível (as outras são redesenhadas quando abertas)
+    if (state.tab === 'graph') renderGraphArea();
+    else if (state.tab === 'chart') renderChartArea();
+    else if (state.tab === 'history') renderHistory();
+    else if (state.tab === 'logs') renderLogs();
+  }
+
+  function setTab(t, focus) {
+    state.tab = t;
+    document.querySelectorAll('[role="tab"]').forEach(b => {
+      const on = b.dataset.tab === t;
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+      b.tabIndex = on ? 0 : -1;
+      if (on && focus) b.focus();
+    });
+    document.querySelectorAll('.panel').forEach(p => { p.hidden = p.id !== 'panel-' + t; });
+    renderAll();
   }
 
   const seq = (route, V) => route.map(i => V[i].id).join(' → ');
@@ -287,25 +312,30 @@
     $('#m-iterbest').textContent = rec ? fmt(rec.bestIterLen, 4) : '—';
     $('#m-mean').textContent = rec ? fmt(rec.meanLen, 4) : '—';
     $('#m-best').textContent = rec ? fmt(rec.bestLen, 4) : 'ainda não calculada';
-    $('#best-route').textContent = rec
+    const bestTxt = rec
       ? `${seq(rec.bestRoute, gd.vertices)}  ·  distância total ${fmt(rec.bestLen, 4)}  ·  encontrada na iteração ${rec.bestFoundAt}`
       : 'ainda não calculada';
+    $('#best-route').textContent = bestTxt;
+    $('.best-line').title = bestTxt;
   }
 
   function edgeSig(gd) { return gd.vertices.map(v => v.id).join('|') + '#' + (gd.tau ? 1 : 0); }
 
+  function renderNav() {
+    const { sim, it, last } = view();
+    $('#nav-label').textContent = sim ? `Iteração ${it} de ${sim.cfg.iterations}` : 'Estado inicial';
+    $('#nav-prev').disabled = !sim || it <= 0;
+    $('#nav-next').disabled = !sim || it >= last;
+    $('#nav-follow').hidden = !(sim && state.viewIter !== null && state.viewIter < last);
+  }
+
   function renderGraphArea() {
-    const gd = state.gd, { sim, it, last } = view();
+    const gd = state.gd;
     Viz.renderGraph($('#graph'), {
       vertices: gd.vertices, depot: gd.depot, tau: gd.tau, scale: gd.scale,
       bestRoute: gd.bestRoute, overlayRoute: gd.overlayRoute, showLabels: state.showLabels,
       edgeSelected: validSel(state.pinned), edgeHover: validSel(state.hover)
     });
-    // navegação
-    $('#nav-label').textContent = sim ? `Iteração ${it} de ${sim.cfg.iterations}` : 'Estado inicial';
-    $('#nav-prev').disabled = !sim || it <= 0;
-    $('#nav-next').disabled = !sim || it >= last;
-    $('#nav-follow').hidden = !(sim && state.viewIter !== null && state.viewIter < last);
     renderEdgeSelect();
     renderEdgeInfo();
     renderLegend();
@@ -325,7 +355,6 @@
       return `<li><svg width="52" height="14" aria-hidden="true"><line x1="2" y1="7" x2="50" y2="7" stroke="var(--ph)" stroke-width="${st.width.toFixed(2)}" stroke-opacity="${st.opacity.toFixed(3)}" stroke-linecap="round"/></svg><span>τ = ${fmt(ref * f, 3)}</span></li>`;
     }).join('');
     $('#legend').innerHTML = `
-      <h3>Legenda</h3>
       <ul class="lg">
         ${rows}
         <li><svg width="52" height="14" aria-hidden="true"><path d="M3,10 Q26,0 49,10" fill="none" stroke="var(--best)" stroke-width="3"/><polygon points="7,0 -5,-5 -5,5" transform="translate(26,5) rotate(12)" fill="var(--best)"/></svg><span>melhor rota acumulada (o número é a ordem de visita)</span></li>
@@ -424,6 +453,23 @@
   /* --- logs --- */
   const isOpen = (key, def) => (key in state.open ? state.open[key] : def);
 
+  function antBody(sim, rec, k) {
+    const V = sim.cfg.vertices, ant = rec.ants[k];
+    const ctx = { n: sim.n, depot: sim.cfg.depot, tau: rec.tauBefore, dist: sim.dist, alpha: sim.cfg.alpha, beta: sim.cfg.beta };
+    const ex = AS.explainRoute(ctx, ant.route, ant.steps);
+    let html = '';
+    ex.steps.forEach((st, j) => {
+      const key = `a${k}s${j}`;
+      const rows = st.candidates.map((c, q) => `<tr class="${c === st.chosen ? 'chosen' : ''}"><td>${esc(V[c].id)}</td><td>${fmt(st.dist[q], 4)}</td><td>${fmt(st.tau[q], 6)}</td><td>${fmt(st.w[q], 6)}</td><td><span class="pbar"><i style="width:${(st.p[q] * 100).toFixed(1)}%"></i></span>${fmt(st.p[q] * 100, 2)}%</td><td>${c === st.chosen ? 'escolhido' : ''}</td></tr>`).join('');
+      html += `<details class="step" data-key="${key}" ${isOpen(key, false) ? 'open' : ''}><summary>Passo ${j + 1}: em <b>${esc(V[st.from].id)}</b> → <b>${esc(V[st.chosen].id)}</b> <span class="muted">(${st.single ? 'único candidato' : st.candidates.length + ' candidatos'})</span></summary>
+        <div class="xscroll"><table class="ltable"><thead><tr><th>Candidato j</th><th>d(i,j)</th><th>τ(i,j)</th><th>w(i,j)</th><th>p(i,j)</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+        <p class="muted small">${st.single ? 'Só havia um candidato: p = 100%, sem sorteio.' : `Número sorteado u = ${fmt(st.u, 6)} (sorteio proporcional às probabilidades acima).`}</p></details>`;
+    });
+    html += `<p class="ret">Todos os vértices foram visitados: retorno obrigatório <b>${esc(V[ex.returnFrom].id)} → ${esc(V[ex.depot].id)}</b> (d = ${fmt(ex.returnDist, 4)}).</p>
+      <p><b>Rota:</b> ${esc(seq(ant.route, V))} · <b>comprimento L = ${fmt(ant.length, 6)}</b></p>`;
+    return html;
+  }
+
   function renderLogs() {
     const { sim, it } = view();
     const box = $('#logs-body');
@@ -433,37 +479,21 @@
     }
     const rec = sim.history[it - 1], V = sim.cfg.vertices;
     if (state.logAnt >= rec.ants.length) state.logAnt = 0;
-    const ant = rec.ants[state.logAnt];
-    const ctx = { n: sim.n, depot: sim.cfg.depot, tau: rec.tauBefore, dist: sim.dist, alpha: sim.cfg.alpha, beta: sim.cfg.beta };
-    const ex = AS.explainRoute(ctx, ant.route, ant.steps);
 
-    let html = `<div class="log-head">Iteração <b>${it}</b> · todas as formigas usaram os feromônios do fim da iteração ${it - 1}.
-      <label class="inline">Formiga
-        <select id="log-ant">${rec.ants.map((a, k) => `<option value="${k}" ${k === state.logAnt ? 'selected' : ''}>${k + 1} — L = ${fmt(a.length, 4)}${k === rec.bestIterAnt ? ' (melhor da iteração)' : ''}</option>`).join('')}</select>
-      </label></div>`;
+    let html = `<p class="log-head">Iteração <b>${it}</b> · todas as formigas usaram os feromônios do fim da iteração ${it - 1}. Menor L = ${fmt(rec.bestIterLen, 6)} · média = ${fmt(rec.meanLen, 6)} · melhor acumulada = ${fmt(rec.bestLen, 6)}.</p>
+      <p class="hint">Abra uma formiga para ver, passo a passo, candidatos, probabilidades, número sorteado e vértice escolhido.</p>`;
 
-    // construção
-    html += `<details data-key="cons" ${isOpen('cons', true) ? 'open' : ''}><summary>Construção da rota da formiga ${state.logAnt + 1}</summary><div class="inner">`;
-    ex.steps.forEach((s, k) => {
-      const key = 'step' + k;
-      const rows = s.candidates.map((c, q) => `<tr class="${c === s.chosen ? 'chosen' : ''}"><td>${esc(V[c].id)}</td><td>${fmt(s.dist[q], 4)}</td><td>${fmt(s.tau[q], 6)}</td><td>${fmt(s.w[q], 6)}</td><td><span class="pbar"><i style="width:${(s.p[q] * 100).toFixed(1)}%"></i></span>${fmt(s.p[q] * 100, 2)}%</td><td>${c === s.chosen ? 'escolhido' : ''}</td></tr>`).join('');
-      html += `<details class="step" data-key="${key}" ${isOpen(key, k === 0) ? 'open' : ''}><summary>Passo ${k + 1}: em <b>${esc(V[s.from].id)}</b> · candidatos ${s.candidates.map(c => esc(V[c].id)).join(', ')} · escolhido <b>${esc(V[s.chosen].id)}</b></summary>
-        <div class="xscroll"><table class="ltable"><thead><tr><th>Candidato j</th><th>d(i,j)</th><th>τ(i,j)</th><th>w(i,j)</th><th>p(i,j)</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
-        <p class="muted small">${s.single ? 'Só havia um candidato: p = 100%, sem sorteio.' : `Número sorteado u = ${fmt(s.u, 6)} (sorteio proporcional às probabilidades acima).`}</p></details>`;
+    html += `<details class="grp" data-key="ants" ${isOpen('ants', true) ? 'open' : ''}><summary>Construção das rotas (${rec.ants.length} formigas)</summary><div class="inner">`;
+    rec.ants.forEach((a, k) => {
+      const key = 'ant' + k, op = isOpen(key, false);
+      html += `<details class="ant" data-key="${key}" data-ant="${k}" ${op ? 'open' : ''}><summary><b>Formiga ${k + 1}</b> · L = ${fmt(a.length, 4)}${k === rec.bestIterAnt ? ' <span class="star">menor da iteração</span>' : ''} <span class="muted">· ${esc(seq(a.route, V))}</span></summary><div class="ant-body">${op ? antBody(sim, rec, k) : ''}</div></details>`;
     });
-    html += `<p class="ret">Todos os vértices foram visitados: retorno obrigatório <b>${esc(V[ex.returnFrom].id)} → ${esc(V[ex.depot].id)}</b> (d = ${fmt(ex.returnDist, 4)}).</p>
-      <p><b>Rota:</b> ${esc(seq(ant.route, V))} · <b>comprimento L = ${fmt(ant.length, 6)}</b></p></div></details>`;
+    html += '</div></details>';
 
-    // rotas de todas as formigas
-    html += `<details data-key="ants" ${isOpen('ants', false) ? 'open' : ''}><summary>Rotas e comprimentos das ${rec.ants.length} formigas</summary><div class="inner scroll"><div class="xscroll"><table class="ltable"><thead><tr><th>Formiga</th><th>Rota</th><th>L</th></tr></thead><tbody>${
-      rec.ants.map((a, k) => `<tr class="${k === rec.bestIterAnt ? 'chosen' : ''}"><td>${k + 1}</td><td>${esc(seq(a.route, V))}</td><td>${fmt(a.length, 4)}</td></tr>`).join('')}</tbody></table></div>
-      <p class="muted small">Menor L = ${fmt(rec.bestIterLen, 6)} · média = ${fmt(rec.meanLen, 6)} · melhor acumulada = ${fmt(rec.bestLen, 6)}.</p></div></details>`;
-
-    // atualização dos feromônios
     const rho = sim.cfg.rho, Q = sim.cfg.Q;
-    html += `<details data-key="upd" ${isOpen('upd', true) ? 'open' : ''}><summary>Atualização dos feromônios (ρ = ${fmt(rho * 100, 4)}% · Q = ${fmt(Q, 4)})</summary><div class="inner scroll">
+    html += `<details class="grp" data-key="upd" ${isOpen('upd', false) ? 'open' : ''}><summary>Atualização dos feromônios (ρ = ${fmt(rho * 100, 4)}% · Q = ${fmt(Q, 4)})</summary><div class="inner">
       <p class="muted small">Só depois de todas as formigas terminarem: τ_novo = (1 − ρ) · τ_antigo + Σ Q/L. A aresta de retorno ao depósito também recebe depósito.</p>
-      <div class="xscroll"><table class="ltable"><thead><tr><th>Aresta</th><th>d</th><th>Anterior</th><th>Após evaporação</th><th>Depósito total</th><th>Final</th><th>Registro</th></tr></thead><tbody>${
+      <div class="xscroll tall"><table class="ltable"><thead><tr><th>Aresta</th><th>d</th><th>Anterior</th><th>Após evaporação</th><th>Depósito total</th><th>Final</th><th>Registro</th></tr></thead><tbody>${
       rec.edgeLog.map(e => `<tr class="${e.deposit > 0 ? 'dep' : ''}"><td>${esc(V[e.i].id)}–${esc(V[e.j].id)}</td><td>${fmt(sim.dist[e.i][e.j], 4)}</td><td>${fmt(e.prev, 6)}</td><td>${fmt(e.evap, 6)}</td><td>${fmt(e.deposit, 6)}</td><td>${fmt(e.final, 6)}${e.floored ? ' <span class="muted">(piso 10⁻¹²)</span>' : ''}</td><td class="muted small">anterior ${fmt(e.prev, 6)}; após evaporação ${fmt(e.evap, 6)}; depósito ${fmt(e.deposit, 6)}; final ${fmt(e.final, 6)}</td></tr>`).join('')}</tbody></table></div></div></details>`;
     box.innerHTML = html;
   }
@@ -546,8 +576,23 @@
     });
     // logs
     const logs = $('#logs-body');
-    logs.addEventListener('change', e => { if (e.target.id === 'log-ant') { state.logAnt = +e.target.value; state.gd = computeGraphData(); renderGraphArea(); renderLogs(); } });
-    logs.addEventListener('toggle', e => { const k = e.target.dataset && e.target.dataset.key; if (k) state.open[k] = e.target.open; }, true);
+    logs.addEventListener('toggle', e => {
+      const d = e.target, k = d.dataset && d.dataset.key; if (!k) return;
+      state.open[k] = d.open;
+      if (d.classList.contains('ant') && d.open) {
+        const body = d.querySelector('.ant-body'), { sim, it } = view();
+        if (!body.firstChild && sim && it > 0) body.innerHTML = antBody(sim, sim.history[it - 1], +d.dataset.ant);
+        state.logAnt = +d.dataset.ant; // a rota exibida na sobreposição do grafo
+      }
+    }, true);
+    // abas
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
+    tabs.forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+    $('.tabs').addEventListener('keydown', e => {
+      const i = tabs.findIndex(b => b.dataset.tab === state.tab);
+      const n = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i + tabs.length - 1) % tabs.length : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : -1;
+      if (n >= 0) { e.preventDefault(); setTab(tabs[n].dataset.tab, true); }
+    });
   }
 
   /* ---------------- início ---------------- */

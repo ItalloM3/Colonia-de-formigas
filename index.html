@@ -5,18 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rota de entregas por colônia de formigas — Ant System</title>
   <meta name="description" content="Simulador de Ant System para o problema do caixeiro viajante (rota de entregas). UFPI — Inteligência Artificial 2026.2.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <header class="top">
   <div class="title">
+    <p class="eyebrow">SIMULAÇÃO · ANT SYSTEM</p>
     <h1>Rota de entregas por colônia de formigas</h1>
     <p>Ant System · Inteligência Artificial · UFPI 2026.2</p>
   </div>
-  <a id="repo-link" class="repo" href="https://github.com/SEU-USUARIO/colonia-formigas" target="_blank" rel="noopener">Código-fonte no GitHub</a>
+  <a id="repo-link" class="repo" href="https://github.com/ItalloM3/Colonia-de-formigas" target="_blank" rel="noopener">Código-fonte no GitHub</a>
 </header>
 
 <div class="layout">
@@ -44,61 +42,79 @@
     </section>
 
     <section>
-      <h2>Parâmetros</h2>
-      <div id="params" class="params"></div>
-      <button type="button" id="preset-params" class="btn small ghost">Usar parâmetros do teste 6.4</button>
+      <details class="acc" id="params-acc">
+        <summary><span class="acc-t">Ajustes do algoritmo</span><span class="acc-s" id="params-sum"></span></summary>
+        <div class="acc-body">
+          <div id="params" class="params"></div>
+          <button type="button" id="preset-params" class="btn small ghost">Usar parâmetros do teste 6.4</button>
+        </div>
+      </details>
     </section>
   </aside>
 
   <!-- ============ ÁREA PRINCIPAL ============ -->
   <main id="main">
-    <section class="controls" aria-label="Execução">
-      <div class="buttons">
-        <button type="button" id="btn-run" class="btn primary">Executar</button>
-        <button type="button" id="btn-pause" class="btn">Pausar</button>
-        <button type="button" id="btn-step" class="btn">Avançar uma iteração</button>
-        <button type="button" id="btn-reset" class="btn">Reiniciar</button>
-      </div>
-      <div class="speed">
-        <label for="speed">Pausa entre iterações</label>
-        <input type="range" id="speed" min="0" max="1500" step="50" value="300">
-        <output id="speed-out">300 ms</output>
-      </div>
-      <p id="status" class="status" role="status" aria-live="polite"></p>
-      <p class="hint" style="margin:0">A velocidade só muda o ritmo da animação; os sorteios e resultados são os mesmos.</p>
-    </section>
+    <!-- painel fixo: controles + métricas -->
+    <div class="dock">
+      <section class="controls" aria-label="Execução">
+        <div class="buttons">
+          <button type="button" id="btn-run" class="btn primary">Executar</button>
+          <button type="button" id="btn-pause" class="btn">Pausar</button>
+          <button type="button" id="btn-step" class="btn">Avançar uma iteração</button>
+          <button type="button" id="btn-reset" class="btn">Reiniciar</button>
+        </div>
+        <div class="speed" title="A velocidade só muda o ritmo da animação; os sorteios e resultados são os mesmos.">
+          <label for="speed">Pausa entre iterações</label>
+          <input type="range" id="speed" min="0" max="1500" step="50" value="300">
+          <output id="speed-out">300 ms</output>
+        </div>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </section>
+      <section class="metrics" aria-label="Métricas">
+        <div class="metric"><span class="m-label">Iteração</span><strong id="m-iter">0</strong><span class="m-sub" id="m-iter-sub"></span></div>
+        <div class="metric"><span class="m-label">Menor da iteração</span><strong id="m-iterbest">—</strong></div>
+        <div class="metric"><span class="m-label">Média das formigas</span><strong id="m-mean">—</strong></div>
+        <div class="metric accent"><span class="m-label">Melhor distância acumulada</span><strong id="m-best">ainda não calculada</strong></div>
+      </section>
+      <p class="best-line"><span class="m-label">Melhor rota</span> <span id="best-route">ainda não calculada</span></p>
+    </div>
 
     <div id="errors" class="errors" role="alert" hidden></div>
     <div id="banner" class="banner" hidden></div>
 
-    <section class="metrics" aria-label="Métricas">
-      <div class="metric"><span class="m-label">Iteração</span><strong id="m-iter">0</strong><span class="m-sub" id="m-iter-sub"></span></div>
-      <div class="metric"><span class="m-label">Menor distância da iteração</span><strong id="m-iterbest">—</strong></div>
-      <div class="metric"><span class="m-label">Média das formigas</span><strong id="m-mean">—</strong></div>
-      <div class="metric accent"><span class="m-label">Melhor distância acumulada</span><strong id="m-best">ainda não calculada</strong></div>
-    </section>
-    <p class="best-line"><span class="m-label">Melhor rota</span> <span id="best-route">ainda não calculada</span></p>
-
-    <section class="stage" aria-label="Grafo">
-      <div class="view-nav" id="view-nav">
+    <div class="tabbar">
+      <div class="tabs" role="tablist" aria-label="Seções da simulação">
+        <button type="button" role="tab" id="tab-graph" data-tab="graph" aria-controls="panel-graph" aria-selected="true">Grafo</button>
+        <button type="button" role="tab" id="tab-chart" data-tab="chart" aria-controls="panel-chart" aria-selected="false" tabindex="-1">Gráfico</button>
+        <button type="button" role="tab" id="tab-history" data-tab="history" aria-controls="panel-history" aria-selected="false" tabindex="-1">Histórico</button>
+        <button type="button" role="tab" id="tab-logs" data-tab="logs" aria-controls="panel-logs" aria-selected="false" tabindex="-1">Logs</button>
+      </div>
+      <div class="view-nav" id="view-nav" aria-label="Iteração visualizada">
         <button type="button" id="nav-prev" class="btn small" aria-label="Iteração anterior">‹</button>
-        <span id="nav-label">Iteração 0</span>
+        <span id="nav-label">Estado inicial</span>
         <button type="button" id="nav-next" class="btn small" aria-label="Próxima iteração">›</button>
-        <button type="button" id="nav-follow" class="btn small ghost" hidden>Voltar à mais recente</button>
-        <label class="check"><input type="checkbox" id="show-labels"> Valores de τ nas arestas</label>
-        <label class="check"><input type="checkbox" id="show-ant"> Mostrar rota da formiga do log</label>
+        <button type="button" id="nav-follow" class="btn small ghost" hidden>Ir para a mais recente</button>
       </div>
-      <div class="stage-body">
-        <svg id="graph" class="graph" role="img" aria-label="Grafo completo dos pontos de entrega com feromônio nas arestas"></svg>
-        <div class="side">
-          <div class="edge-panel" id="edge-panel" aria-live="polite"></div>
-          <div class="legend" id="legend"></div>
+    </div>
+
+    <section class="panel" id="panel-graph" role="tabpanel" aria-labelledby="tab-graph">
+      <div class="stage">
+        <div class="toolbar">
+          <label class="check"><input type="checkbox" id="show-labels"> Valores de τ nas arestas</label>
+          <label class="check"><input type="checkbox" id="show-ant"> Mostrar a rota da formiga aberta nos logs</label>
         </div>
+        <div class="stage-body">
+          <svg id="graph" class="graph" role="img" aria-label="Grafo completo dos pontos de entrega com feromônio nas arestas"></svg>
+          <div class="side">
+            <div class="edge-panel" id="edge-panel" aria-live="polite"></div>
+            <details class="legend-acc" open><summary>Legenda</summary><div class="legend" id="legend"></div></details>
+          </div>
+        </div>
+        <p id="scale-note" class="scale-note"></p>
       </div>
-      <p id="scale-note" class="scale-note"></p>
     </section>
 
-    <section class="block">
+    <section class="panel" id="panel-chart" role="tabpanel" aria-labelledby="tab-chart" hidden>
       <h2>Evolução das distâncias</h2>
       <svg id="chart" class="chart" role="img" aria-label="Gráfico da evolução das distâncias por iteração"></svg>
       <ul class="chart-legend">
@@ -108,13 +124,13 @@
       </ul>
     </section>
 
-    <section class="block">
+    <section class="panel" id="panel-history" role="tabpanel" aria-labelledby="tab-history" hidden>
       <h2>Histórico por iteração</h2>
-      <p class="hint">Clique em uma linha para ver o grafo e os logs daquela iteração.</p>
+      <p class="hint">Clique em uma linha para visualizar aquela iteração no grafo e nos logs.</p>
       <div class="table-wrap" id="history-wrap"><table class="htable" id="history"></table></div>
     </section>
 
-    <section class="block" id="logs-block">
+    <section class="panel" id="panel-logs" role="tabpanel" aria-labelledby="tab-logs" hidden>
       <h2>Logs da execução</h2>
       <div id="logs-body"></div>
     </section>
@@ -123,7 +139,6 @@
 
 <footer class="foot">
   <span>Trabalho de Inteligência Artificial — UFPI, 2026.2.</span>
-  <a href="https://github.com/SEU-USUARIO/colonia-formigas" class="repo-foot" target="_blank" rel="noopener">Repositório no GitHub</a>
 </footer>
 
 <script src="js/random.js"></script>
